@@ -11,10 +11,11 @@ RESET_COLOR = "#16a085"
 WIN_COLOR = "#2ecc71"
 SELECT_COLOR = "#9b59b6"
 SCORE_COLOR = "#f39c12"
+FINAL_WIN_COLOR = "#27ae60"
 
 window = tk.Tk()
 window.title("Крестики-нолики")
-window.geometry("350x550")
+window.geometry("350x600")
 window.configure(bg=BG_COLOR)
 
 # Настройка шрифтов
@@ -23,6 +24,7 @@ reset_font = font.Font(family="Helvetica", size=14, weight="bold")
 status_font = font.Font(family="Helvetica", size=12)
 title_font = font.Font(family="Helvetica", size=16, weight="bold")
 score_font = font.Font(family="Helvetica", size=14)
+final_font = font.Font(family="Helvetica", size=16, weight="bold")
 
 # Игровые переменные
 current_player = "X"
@@ -32,17 +34,20 @@ game_started = False
 player_wins = 0
 computer_wins = 0
 draws = 0
+game_over = False
 
 
 def start_game(symbol):
-    global player_symbol, game_started, current_player
+    global player_symbol, game_started, current_player, game_over
     player_symbol = symbol
     game_started = True
+    game_over = False
     current_player = "X"
     choice_frame.pack_forget()
     game_frame.pack()
     update_status(f"Ход игрока: {current_player}")
     update_score()
+    final_winner_label.pack_forget()
 
 
 def check_winner():
@@ -79,9 +84,9 @@ def is_board_full():
 
 
 def on_click(row, col):
-    global current_player, player_wins, computer_wins, draws
+    global current_player, player_wins, computer_wins, draws, game_over
 
-    if not game_started or buttons[row][col]['text'] != "":
+    if not game_started or buttons[row][col]['text'] != "" or game_over:
         return
 
     buttons[row][col]['text'] = current_player
@@ -95,21 +100,35 @@ def on_click(row, col):
             computer_wins += 1
             winner = "Компьютер"
 
-        update_status(f"{winner} победили!")
-        messagebox.showinfo("Игра окончена", f"{winner} победили!")
+        update_status(f"{winner} победили в этой партии!")
         update_score()
-        reset_board()
+
+        if player_wins >= 3 or computer_wins >= 3:
+            end_match()
+        else:
+            window.after(1500, reset_board)
         return
+
     elif is_board_full():
         draws += 1
-        update_status("Ничья!")
-        messagebox.showinfo("Игра окончена", "Ничья!")
+        update_status("Ничья в этой партии!")
         update_score()
-        reset_board()
+        window.after(1500, reset_board)
         return
 
     current_player = "O" if current_player == "X" else "X"
     update_status(f"Ход: {'Ваш' if current_player == player_symbol else 'Компьютера'}")
+
+
+def end_match():
+    global game_over
+    game_over = True
+    if player_wins >= 3:
+        final_winner_label.config(text="Вы выиграли матч!", fg=FINAL_WIN_COLOR)
+    else:
+        final_winner_label.config(text="Компьютер выиграл матч!", fg=X_COLOR)
+    final_winner_label.pack(pady=20)
+    new_match_btn.pack(pady=10)
 
 
 def reset_board():
@@ -121,17 +140,25 @@ def reset_board():
     update_status(f"Ход игрока: {current_player}")
 
 
-def reset_game():
-    global game_started, player_wins, computer_wins, draws
-    game_started = False
+def reset_match():
+    global player_wins, computer_wins, draws, game_over
     player_wins = 0
     computer_wins = 0
     draws = 0
+    game_over = False
     reset_board()
+    update_score()
+    final_winner_label.pack_forget()
+    new_match_btn.pack_forget()
+
+
+def reset_game():
+    global game_started
+    game_started = False
+    reset_match()
     game_frame.pack_forget()
     choice_frame.pack()
     status_label.config(text="Выберите символ для игры")
-    update_score()
 
 
 def update_status(message):
@@ -139,7 +166,11 @@ def update_status(message):
 
 
 def update_score():
-    score_label.config(text=f"Вы: {player_wins}  Компьютер: {computer_wins}  Ничьи: {draws}")
+    score_label.config(text=f"Вы: {player_wins}/3  Компьютер: {computer_wins}/3  Ничьи: {draws}")
+    if player_wins >= 3 or computer_wins >= 3:
+        score_label.config(fg=FINAL_WIN_COLOR)
+    else:
+        score_label.config(fg=SCORE_COLOR)
 
 
 # Главный фрейм для выбора символа
@@ -167,7 +198,7 @@ game_frame = tk.Frame(window, bg=BG_COLOR)
 
 # Счетчик побед
 score_label = tk.Label(game_frame,
-                       text="Вы: 0  Компьютер: 0  Ничьи: 0",
+                       text="Вы: 0/3  Компьютер: 0/3  Ничьи: 0",
                        font=score_font, bg=BG_COLOR, fg=SCORE_COLOR)
 score_label.grid(row=0, column=0, columnspan=3, pady=(5, 5), sticky="ew")
 
@@ -201,6 +232,12 @@ reset_score_btn = tk.Button(button_frame, text="Сбросить счет", font
                             bg="#c0392b", fg=TEXT_COLOR, relief="flat",
                             command=reset_game)
 reset_score_btn.pack(side=tk.LEFT, padx=5, expand=True, fill=tk.X)
+
+# Элементы для финального результата
+final_winner_label = tk.Label(game_frame, text="", font=final_font, bg=BG_COLOR)
+new_match_btn = tk.Button(game_frame, text="Новый матч", font=reset_font,
+                          bg=FINAL_WIN_COLOR, fg=TEXT_COLOR, relief="flat",
+                          command=reset_match)
 
 # Настраиваем расширение строк/колонок
 for i in range(2, 5):
