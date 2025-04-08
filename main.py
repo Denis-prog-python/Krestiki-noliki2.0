@@ -3,7 +3,7 @@ from tkinter import messagebox
 
 window = tk.Tk()
 window.title("Крестики-нолики")
-window.geometry("300x400")  # Увеличили высоту для кнопки сброса
+window.geometry("300x400")
 
 current_player = "X"
 buttons = []
@@ -24,6 +24,14 @@ def check_winner():
     return False
 
 
+def is_board_full():
+    for row in buttons:
+        for button in row:
+            if button["text"] == "":
+                return False
+    return True
+
+
 def on_click(row, col):
     global current_player
 
@@ -34,6 +42,10 @@ def on_click(row, col):
 
     if check_winner():
         messagebox.showinfo("Игра окончена", f"Игрок {current_player} победил!")
+        reset_game()
+        return
+    elif is_board_full():
+        messagebox.showinfo("Игра окончена", "Ничья!")
         reset_game()
         return
 
